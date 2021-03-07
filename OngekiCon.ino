@@ -96,6 +96,13 @@ void setup() {
 }
 
 void loop() {
+
+//switching by doing leftwall+leftmenu+rightwall+rightmenu
+  if(digitalRead(Pin_LeftMenu) && digitalRead(Pin_RightMenu) && digitalRead(Pin_LeftSide) && digitalRead(Pin_RightSide)){
+    xInputMode = false;
+    continue;
+  }
+
   // LED Colors
   for(int i = 0; i < 3; ++i){
     leds[i] = CRGB(255, 20, 255);
