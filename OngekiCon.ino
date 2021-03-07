@@ -26,6 +26,10 @@
 #include <XInput.h>
 #include <FastLED.h>
 
+#include "./src/Encoder/Encoder.h"
+#include <Keyboard.h>
+#include <Mouse.h>
+
 // LED Strip Setup
 #define LED_PIN     12
 #define NUM_LEDS    12
@@ -51,8 +55,25 @@ const int Pin_RightSide = 9;
 const int Pin_LeftMenu = 10;
 const int Pin_RightMenu = 11;
 
+// for keyboard and mouse mode
+
+
+/* Software Debounce Interval */
+#define DEBOUNCE 10
+
+unsigned int buttonPin[10] = {Pin_LeftA, Pin_LeftB, Pin_LeftC, Pin_RightA, Pin_RightB, Pin_RightC, Pin_LeftSide, Pin_RightSide, Pin_LeftMenu, Pin_RightMenu};
+unsigned long keyTimer[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+bool buttonState[10];
+bool switchType[10] = {true, true, true, true, true, true, true, true, true, true};
+char asciiKey[10] = {0x61, 0x73, 0x64, 0x6A, 0x6B, 0x6C, 0x71, 0x70, 0x65, 0x75};
+// asd, jkl, q p (side wall), e u (menu),
+
+
 void setup() {
   // LED Setup
+  
+  Keyboard.begin();
+
   FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
 
   // Set Lever Range
@@ -71,6 +92,7 @@ void setup() {
   pinMode(Pin_RightMenu, INPUT_PULLUP);
   XInput.setAutoSend(false);  // Wait for all controls before sending
   XInput.begin();
+  bool xInputMode = true;
 }
 
 void loop() {
@@ -89,45 +111,81 @@ void loop() {
   } 
   FastLED.show();
   
-  // Read pin values and store in variables
-  int lever = analogRead(Pin_Lever);
-  boolean leftA = !digitalRead(Pin_LeftA);
-  boolean leftB = !digitalRead(Pin_LeftB);
-  boolean leftC = !digitalRead(Pin_LeftC);
-  boolean rightA = !digitalRead(Pin_RightA);
-  boolean rightB = !digitalRead(Pin_RightB);
-  boolean rightC = !digitalRead(Pin_RightC);
-  boolean leftSide = !digitalRead(Pin_LeftSide);
-  boolean rightSide = !digitalRead(Pin_RightSide);
-  boolean leftMenu  = !digitalRead(Pin_LeftMenu);
-  boolean rightMenu = !digitalRead(Pin_RightMenu);
+  if(xInputMode){
+    // Read pin values and store in variables
+    int lever = analogRead(Pin_Lever);
+    boolean leftA = !digitalRead(Pin_LeftA);
+    boolean leftB = !digitalRead(Pin_LeftB);
+    boolean leftC = !digitalRead(Pin_LeftC);
+    boolean rightA = !digitalRead(Pin_RightA);
+    boolean rightB = !digitalRead(Pin_RightB);
+    boolean rightC = !digitalRead(Pin_RightC);
+    boolean leftSide = !digitalRead(Pin_LeftSide);
+    boolean rightSide = !digitalRead(Pin_RightSide);
+    boolean leftMenu  = !digitalRead(Pin_LeftMenu);
+    boolean rightMenu = !digitalRead(Pin_RightMenu);
 
-  // Set XInput DPAD values and allow simultaneous opposite direction pressing
-  XInput.setDpad(leftB, leftB, leftA, leftC, false);// leftB listed twice because I needed something to fill that second dpad slot..it's unused in game
-  
-  // Set XInput buttons
-  XInput.setButton(BUTTON_X, rightA);
-  XInput.setButton(BUTTON_Y, rightB);
-  XInput.setButton(BUTTON_B, rightC);
-  XInput.setButton(BUTTON_LB, leftSide);
-  XInput.setButton(BUTTON_RB, rightSide);
-  XInput.setButton(BUTTON_BACK, leftMenu);
-  XInput.setButton(BUTTON_START, rightMenu);
+    // Set XInput DPAD values and allow simultaneous opposite direction pressing
+    XInput.setDpad(leftB, leftB, leftA, leftC, false);// leftB listed twice because I needed something to fill that second dpad slot..it's unused in game
+    
+    // Set XInput buttons
+    XInput.setButton(BUTTON_X, rightA);
+    XInput.setButton(BUTTON_Y, rightB);
+    XInput.setButton(BUTTON_B, rightC);
+    XInput.setButton(BUTTON_LB, leftSide);
+    XInput.setButton(BUTTON_RB, rightSide);
+    XInput.setButton(BUTTON_BACK, leftMenu);
+    XInput.setButton(BUTTON_START, rightMenu);
 
-  // Set XInput trigger values
-  XInput.setTrigger(TRIGGER_LEFT, positionA);
-  XInput.setTrigger(TRIGGER_RIGHT, positionB);
+    // Set XInput trigger values
+    XInput.setTrigger(TRIGGER_LEFT, positionA);
+    XInput.setTrigger(TRIGGER_RIGHT, positionB);
 
-  // Calculate lever values
-  if(lever < leverRange){
-    positionB = -(lever-leverRange);
-  }else if( lever > leverRange){
-    positionA = lever-leverRange;
-  }else{
-    positionA = 0;
-    positionB = 0;
+    // Calculate lever values
+    if(lever < leverRange){
+      positionB = -(lever-leverRange);
+    }else if( lever > leverRange){
+      positionA = lever-leverRange;
+    }else{
+      positionA = 0;
+      positionB = 0;
+    }
+    
+    // Send control data to the computer
+    XInput.send();
   }
-  
-  // Send control data to the computer
-  XInput.send();
+  else{
+    keyPressEvents();
+  }
+}
+
+void keyPressEvents(){
+  for(int i = 0; i < sizeof(buttonPin) / 2; i++){
+    if(switchType[i] == true){
+      if(digitalRead(buttonPin[i]) == LOW && buttonState[i] == false){
+        Keyboard.press(asciiKey[i]);
+        digitalWrite(ledPin[i], HIGH);
+        buttonState[i] = true;
+        keyTimer[i] = millis();
+      }
+      else if(digitalRead(buttonPin[i]) == HIGH && buttonState[i] == true && millis() - keyTimer[i] > DEBOUNCE){
+        Keyboard.release(asciiKey[i]);
+        digitalWrite(ledPin[i], LOW);
+        buttonState[i] = false;
+      }
+    }
+    else{
+      if(digitalRead(buttonPin[i]) == HIGH && buttonState[i] == false){
+        Keyboard.press(asciiKey[i]);
+        digitalWrite(ledPin[i], HIGH);
+        buttonState[i] = true;
+        keyTimer[i] = millis();
+      }
+      else if(digitalRead(buttonPin[i]) == LOW && buttonState[i] == true && millis() - keyTimer[i] > DEBOUNCE){
+        Keyboard.release(asciiKey[i]);
+        digitalWrite(ledPin[i], LOW);
+        buttonState[i] = false;
+      }
+    }
+  }
 }
