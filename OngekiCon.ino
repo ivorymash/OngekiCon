@@ -66,14 +66,20 @@ unsigned long keyTimer[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 bool buttonState[10];
 bool switchType[10] = {true, true, true, true, true, true, true, true, true, true};
 char asciiKey[10] = {0x61, 0x73, 0x64, 0x6A, 0x6B, 0x6C, 0x71, 0x70, 0x65, 0x75};
+
+
+int o_ec1=500; //lever shit
+
 // asd, jkl, q p (side wall), e u (menu),
 
 
 void setup() {
-  // LED Setup
   
+  //for kb/mouse
   Keyboard.begin();
+  Mouse.begin();
 
+  //LED setup
   FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
 
   // Set Lever Range
@@ -163,8 +169,17 @@ void loop() {
   }
   else{
     keyPressEvents();
+    leverShit();
   }
 }
+
+void leverShit(){
+  int lever = analogRead(Pin_Lever);
+  Serial.println(lever);
+  MouseTo.setTarget(lever-500, 0 ,false);
+  while (MouseTo.move() == false) {}
+}
+
 
 void keyPressEvents(){
   for(int i = 0; i < sizeof(buttonPin) / 2; i++){
