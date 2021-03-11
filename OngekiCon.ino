@@ -105,7 +105,7 @@ void loop() {
 
 //switching by doing leftwall+leftmenu+rightwall+rightmenu
   if(digitalRead(Pin_LeftMenu) && digitalRead(Pin_RightMenu) && digitalRead(Pin_LeftSide) && digitalRead(Pin_RightSide)){
-    xInputMode ? xInputMode == false; xInputMode == true;
+    xInputMode ? xInputMode == false : xInputMode == true;
     continue;
   }
 
